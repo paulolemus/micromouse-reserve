@@ -10,13 +10,15 @@
 // Global variables
 static volatile unsigned int tmr_2_ticks;
 
-static volatile signed int l_qei_counter;
-static volatile signed int r_qei_counter;
+// QEI overflow trackers
+static volatile signed int l_qei_curr;
+static volatile signed int r_qei_curr;
 static volatile signed int l_qei_last;
 static volatile signed int r_qei_last;
 
 // Global position, velocity, and acceleration variables
 // Position
+static volatile signed int l_pos;
 static volatile signed int l_pos_last_err;
 static volatile signed int l_pos_integral;
 // Velocity
@@ -29,6 +31,7 @@ static volatile signed int l_acc_last_err;
 static volatile signed int l_acc_integral;
 
 // Position
+static volatile signed int r_pos;
 static volatile signed int r_pos_last_err;
 static volatile signed int r_pos_integral;
 // Velocity
@@ -44,16 +47,15 @@ static volatile signed int r_acc_integral;
 // Indication that a controller has completed its task, or reached a steady state.
 volatile unsigned int controller_finished;
 
+
 // Sensor readings
 extern volatile unsigned int sl_sensor;
 extern volatile unsigned int sr_sensor;
 extern volatile unsigned int fl_sensor;
 extern volatile unsigned int fr_sensor;
 
-
-
 // Function to execute to control the motors every scan period.
-static void (*motor_control)(void);
+static void (*volatile motor_control)(void);
 
 /*
  * 16-bit res @ 40MIPS = 1220 Hz edge-aligned
@@ -136,6 +138,7 @@ void init_motor_control() {
     IEC0bits.T2IE = 0; // Enable TRM2 interrupts
     
     // Clear global variables
+    l_pos = 0;
     l_pos_last_err = 0;
     l_pos_integral = 0;
     l_vel = 0;
@@ -145,6 +148,7 @@ void init_motor_control() {
     l_acc_last_err = 0;
     l_acc_integral = 0;
     
+    r_pos = 0;
     r_pos_last_err = 0;
     r_pos_integral = 0;
     r_vel = 0;
@@ -162,8 +166,8 @@ void set_motor_control_function(void (*motor_control_ptr)(void)) {
 void enable_motor_control() {
     
     tmr_2_ticks = 0;
-    l_qei_counter = 0;
-    r_qei_counter = 0;
+    l_qei_curr = 0;
+    r_qei_curr = 0;
     l_qei_last = 0;
     r_qei_last = 0;
     controller_finished = 0;
@@ -191,28 +195,76 @@ void enable_motor_control() {
  * Each controller also has coupled global state.
  */
 
+static signed int L_STR_VEL_SP;
+static signed int R_STR_VEL_SP;
 void init_straight_controller() {
-    // Does nothing
+    // Desired velocity is 10 ticks / ms, or 2 revolutions / sec
+    L_STR_VEL_SP = 800; 
+    R_STR_VEL_SP = 800; 
+    
+    // Will always drive forward
+    L_MTR_PER = L_MTR_MIN;
+    R_MTR_PER = R_MTR_MIN;
+    L_MTR_DIR = L_MTR_FWD;
+    R_MTR_DIR = R_MTR_FWD;
 }
 void straight_controller() {
     
-    L_MTR_PER = L_MTR_MIN / 4;
-    R_MTR_PER = R_MTR_MIN / 4;
+    const double kp = 9;
+    const double ki = 0.05;
+    const double kd = 10;
+    
+    // Calculate error in velocity
+    const signed int l_vel_err = L_STR_VEL_SP - l_vel;
+    const signed int r_vel_err = R_STR_VEL_SP - r_vel;
+    
+    // Calculate PID correction value for straight driving
+    const signed l_out =
+        P(l_vel_err, kp) +
+        I(l_vel_err, l_vel_integral, CONTROL_DT, ki) +
+        D(l_vel_err, l_vel_last_err, CONTROL_DT, kd);
+    
+    const signed r_out =
+        P(r_vel_err, kp) +
+        I(r_vel_err, r_vel_integral, CONTROL_DT, ki) +
+        D(r_vel_err, r_vel_last_err, CONTROL_DT, kd);
+    
+    // Save last error for derivative later
+    l_vel_last_err = l_vel_err;
+    r_vel_last_err = r_vel_err;
+    
+    // Calculate and add PID correction for pushing off wall
+    
+    // Make adjustments to the duty cycle of each motor
+    
+    // Left motor
+    signed l_per = L_MTR_PER - l_out;
+    if(l_per < L_MTR_MAX) l_per = L_MTR_MAX;
+    else if(l_per > L_MTR_MIN) l_per = L_MTR_MIN;
+    L_MTR_PER = l_per;
+    
+    // Right motor
+    signed r_per = R_MTR_PER - r_out;
+    if(r_per < R_MTR_MAX) r_per = R_MTR_MAX;
+    else if(r_per > R_MTR_MIN) r_per = R_MTR_MIN;
+    R_MTR_PER = r_per;
 }
 
-void adjust_left_pwm(signed int adj);
-void adjust_right_pwm(signed int adj);
 
 static signed int R_POS_SP;
 static signed int L_POS_SP;
+static signed int R_POS_QEI_SP;
+static signed int L_POS_QEI_SP;
 void init_position_controller() {
+    
     L_MTR_PER = L_MTR_MIN;
     R_MTR_PER = R_MTR_MIN;
-    l_qei_counter = 0;
-    r_qei_counter = 0;
+
+    R_POS_QEI_SP = r_qei_curr;
+    L_POS_QEI_SP = l_qei_curr;
+    
     R_POS_SP = R_QEI_CNT;
     L_POS_SP = L_QEI_CNT;
-    
 }
 void position_controller() {
     
@@ -221,16 +273,16 @@ void position_controller() {
     const double kd = 13;
     
     const signed int r_err = 
-        -r_qei_counter * R_QEI_MAX - (signed)R_QEI_CNT + R_POS_SP;
+        (R_POS_QEI_SP - r_qei_curr) * R_QEI_MAX - (signed)R_QEI_CNT + R_POS_SP;
     const signed int l_err =
-        -l_qei_counter * L_QEI_MAX - (signed)L_QEI_CNT + L_POS_SP;
+        (L_POS_QEI_SP - l_qei_curr) * L_QEI_MAX - (signed)L_QEI_CNT + L_POS_SP;
         
-    const signed int r_out = 
-        P(r_err, kp) + 
+    signed int r_out = 
+        P(r_err, kp) +
         I(r_err, r_pos_integral, CONTROL_DT, ki) +
         D(r_err, r_pos_last_err, CONTROL_DT, kd);
     
-    const signed int l_out = 
+    signed int l_out = 
         P(l_err, kp) +
         I(l_err, l_pos_integral, CONTROL_DT, ki) +
         D(l_err, l_pos_last_err, CONTROL_DT, kd);
@@ -238,9 +290,48 @@ void position_controller() {
     // Save last err
     r_pos_last_err = r_err;
     l_pos_last_err = l_err;
+      
+    // Make motor adjustments for right and left motors separately
+    
+    
+    if(l_out > 0) {
+        // Trying to drive forward
+        L_MTR_DIR = L_MTR_FWD;
+        l_out = L_MTR_MIN - l_out;
         
-    adjust_right_pwm(r_out);
-    adjust_left_pwm(l_out);
+    } else {
+        // Trying to drive backwards
+        L_MTR_DIR = L_MTR_REV;
+        l_out = L_MTR_MIN + l_out;
+    }
+    
+    // Guard overflow
+    if(l_out < L_MTR_MAX) {
+        l_out = L_MTR_MAX;
+    } else if(l_out > L_MTR_MIN) {
+        l_out = L_MTR_MIN;
+    }
+    L_MTR_PER = l_out;
+    
+    
+    if(r_out > 0) {
+        // Trying to drive forward
+        R_MTR_DIR = R_MTR_FWD;
+        r_out = R_MTR_MIN - r_out;
+        
+    } else {
+        // Trying to drive backwards
+        R_MTR_DIR = R_MTR_REV;
+        r_out = R_MTR_MIN + r_out;
+    }
+    
+    // Guard overflow
+    if(r_out > R_MTR_MIN) {
+        r_out = R_MTR_MIN;
+    } else if(r_out < R_MTR_MAX) {
+        r_out = R_MTR_MAX;
+    }
+    R_MTR_PER = r_out;
 }
 
 void turn_left_controller() {
@@ -255,7 +346,7 @@ void turn_around_controller() {
     
 }
 
-
+/*
 // Goal of this function is to drive the left motor at a speed relative to 
 // the value of a sensor.
 void simple_velocity_tester() {
@@ -282,56 +373,7 @@ void simple_velocity_tester() {
         R_MTR_PER = r_mtr_per;
     }
 }
-
-
-/**
- * Used to adjust the speed of the PWM signal for left motor.
- * @param adj Positive increases velocity, negative decreases.
- */
-void adjust_left_pwm(signed int adj) {
-    
-    
-    if(adj > 0) {
-        // Trying to drive forward
-        L_MTR_DIR = L_MTR_FWD;
-        adj = L_MTR_MIN - adj;
-        if(adj < L_MTR_MAX) adj = L_MTR_MAX;
-        if(adj > L_MTR_MIN) adj = L_MTR_MIN;
-        L_MTR_PER = adj;
-        
-    } else {
-        // Trying to drive backwards
-        L_MTR_DIR = L_MTR_REV;
-        adj = L_MTR_MIN + adj;
-        if(adj > L_MTR_MIN) adj = L_MTR_MIN;
-        if(adj < L_MTR_MAX) adj = L_MTR_MAX;
-        L_MTR_PER = adj;
-    }
-}
-
-/**
- * Used to adjust the speed of the PWM signal for left motor.
- * @param adj Positive increases velocity, negative decreases.
- */
-void adjust_right_pwm(signed int adj) {
-    
-    if(adj > 0) {
-        // Trying to drive forward
-        R_MTR_DIR = R_MTR_FWD;
-        adj = R_MTR_MIN - adj;
-        if(adj < R_MTR_MAX) adj = R_MTR_MAX;
-            if(adj > R_MTR_MIN) adj = R_MTR_MIN;
-            R_MTR_PER = adj;
-        
-    } else {
-        // Trying to drive backwards
-        R_MTR_DIR = R_MTR_REV;
-        adj = R_MTR_MIN + adj;
-        if(adj > R_MTR_MIN) adj = R_MTR_MIN;
-        if(adj < R_MTR_MAX) adj = R_MTR_MAX;
-        R_MTR_PER = adj;
-    }
-}
+*/
 
 
 void simple_position_tester() {
@@ -353,11 +395,43 @@ void simple_position_tester() {
         const signed int r_err = SETPOINT - (signed)POS1CNT;
         const signed int l_err = SETPOINT - (signed)POS2CNT;
         
-        const signed r_adj = p_term * r_err;
-        const signed l_adj = p_term * l_err;
+        signed r_adj = p_term * r_err;
+        signed l_adj = p_term * l_err;
         
-        adjust_right_pwm(r_adj);
-        adjust_left_pwm(l_adj);
+        // Make motor adjustments for right and left motors separately
+        if(l_adj > 0) {
+            // Trying to drive forward
+            L_MTR_DIR = L_MTR_FWD;
+            l_adj = L_MTR_MIN - l_adj;
+            if(l_adj < L_MTR_MAX) l_adj = L_MTR_MAX;
+            if(l_adj > L_MTR_MIN) l_adj = L_MTR_MIN;
+            L_MTR_PER = l_adj;
+
+        } else {
+            // Trying to drive backwards
+            L_MTR_DIR = L_MTR_REV;
+            l_adj = L_MTR_MIN + l_adj;
+            if(l_adj > L_MTR_MIN) l_adj = L_MTR_MIN;
+            if(l_adj < L_MTR_MAX) l_adj = L_MTR_MAX;
+            L_MTR_PER = l_adj;
+        }
+
+        if(r_adj > 0) {
+            // Trying to drive forward
+            R_MTR_DIR = R_MTR_FWD;
+            r_adj = R_MTR_MIN - r_adj;
+            if(r_adj < R_MTR_MAX) r_adj = R_MTR_MAX;
+                if(r_adj > R_MTR_MIN) r_adj = R_MTR_MIN;
+                R_MTR_PER = r_adj;
+
+        } else {
+            // Trying to drive backwards
+            R_MTR_DIR = R_MTR_REV;
+            r_adj = R_MTR_MIN + r_adj;
+            if(r_adj > R_MTR_MIN) r_adj = R_MTR_MIN;
+            if(r_adj < R_MTR_MAX) r_adj = R_MTR_MAX;
+            R_MTR_PER = r_adj;
+        }
     }
 }
 
@@ -371,10 +445,34 @@ void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
     if(tmr_2_ticks == CONTROL_DT) {
         tmr_2_ticks = 0;
         
-        // Calculate velocity and acceleration
+        // Calculate position velocity and acceleration
+        const signed int l_pos_fin = L_QEI_CNT;
+        const signed int r_pos_fin = R_QEI_CNT;
+        
+        const double l_pos_del 
+            = (l_qei_curr - l_qei_last) * L_QEI_ROT + l_pos_fin - l_pos;
+        const double r_pos_del 
+            = (r_qei_curr - r_qei_last) * R_QEI_ROT + r_pos_fin - r_pos;
+        
+        const signed int l_vel_fin = l_pos_del * 100 / CONTROL_DT;
+        const signed int r_vel_fin = r_pos_del * 100 / CONTROL_DT;
+        
+        l_acc = (l_vel_fin - l_vel) / CONTROL_DT;
+        r_acc = (r_vel_fin - r_vel) / CONTROL_DT;
+        
+        l_vel = l_vel_fin;
+        r_vel = r_vel_fin;
+        
+        l_pos = l_pos_fin;
+        r_pos = r_pos_fin;
+        
         
         // Call current motor controller function
         (*motor_control)();
+        
+        // Update last qei counter
+        l_qei_last = l_qei_curr;
+        r_qei_last = r_qei_curr;
     }
 }
 
@@ -385,10 +483,23 @@ void __attribute__((__interrupt__, no_auto_psv)) _QEI1Interrupt(void) {
     
     if(R_QEI_CNT > R_QEI_ROT / 2) {
         // If CNT is now max, it underflowed - moving backwards
-        r_qei_counter--;
+        r_qei_curr--;
+        
+        // Check for counter underflows
+        if(r_qei_curr < -32000) {
+            r_qei_last = r_qei_last - r_qei_curr;
+            r_qei_curr = 0;
+        }
+        
     } else {
         // If CNT is now 0, it overflowed - moving forward
-        r_qei_counter++;
+        r_qei_curr++;
+        
+        // Check for counter overflows
+        if(r_qei_curr > 32000) {
+            r_qei_last = r_qei_last - r_qei_curr;
+            r_qei_curr = 0;
+        }
     }
 }
 
@@ -398,9 +509,22 @@ void __attribute__((__interrupt__, no_auto_psv)) _QEI2Interrupt(void) {
     
     if(L_QEI_CNT > L_QEI_ROT / 2) {
         // If CNT is now max, it underflowed - moving backwards
-        l_qei_counter--;
+        l_qei_curr--;
+        
+        // Check for counter underflows - fix if less than -30000
+        if(l_qei_curr < -32000) {
+            l_qei_last = l_qei_last - l_qei_curr;
+            l_qei_curr = 0;
+        }
+        
     } else {
         // If CNT is now 0, it overflowed - moving forward
-        l_qei_counter++;
+        l_qei_curr++;
+        
+        // Check for counter overflows - fix if approaching signed 16 bit max
+        if(l_qei_curr > 32000) {
+            l_qei_last = l_qei_last - l_qei_curr;
+            l_qei_curr = 0;
+        }
     }
 }

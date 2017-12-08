@@ -63,7 +63,6 @@ extern "C" {
     void turn_around_controller();
 
     // Testing functions for the motors
-    void simple_velocity_tester();
     void simple_position_tester();
 
 
