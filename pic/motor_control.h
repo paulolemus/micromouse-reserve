@@ -29,6 +29,8 @@ extern "C" {
 #define L_MTR_MAX 0
 #define L_MTR_MIN 3200
     
+#define CONTROL_DT 2
+    
 // QEI macros
 #define L_QEI_CNT POS2CNT // Counter changed by qei module
 #define R_QEI_CNT POS1CNT // Counter changed by qei module

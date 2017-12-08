@@ -9,8 +9,37 @@
 
 // Global variables
 static volatile unsigned int tmr_2_ticks;
+
 static volatile signed int l_qei_counter;
 static volatile signed int r_qei_counter;
+static volatile signed int l_qei_last;
+static volatile signed int r_qei_last;
+
+// Global position, velocity, and acceleration variables
+// Position
+static volatile signed int l_pos_last_err;
+static volatile signed int l_pos_integral;
+// Velocity
+static volatile signed int l_vel;
+static volatile signed int l_vel_last_err;
+static volatile signed int l_vel_integral;
+// Acceleration
+static volatile signed int l_acc;
+static volatile signed int l_acc_last_err;
+static volatile signed int l_acc_integral;
+
+// Position
+static volatile signed int r_pos_last_err;
+static volatile signed int r_pos_integral;
+// Velocity
+static volatile signed int r_vel;
+static volatile signed int r_vel_last_err;
+static volatile signed int r_vel_integral;
+// Acceleration
+static volatile signed int r_acc;
+static volatile signed int r_acc_last_err;
+static volatile signed int r_acc_integral;
+
 
 // Indication that a controller has completed its task, or reached a steady state.
 volatile unsigned int controller_finished;
@@ -95,7 +124,6 @@ void init_motor_control() {
     IEC4bits.QEI2IE = 0; // Disable interrupts
     
     
-    
     // Init timer 2 used for PID updating
     T2CONbits.TCKPS = 0b10; // 1:64 prescaler, ticks at 500000 Hz
     TMR2 = 0; // Clear TMR2 counter
@@ -106,6 +134,25 @@ void init_motor_control() {
     IPC1bits.T2IP = 5; // lvl 6 priority (second highest)
     IFS0bits.T2IF = 0; // clear IF flag
     IEC0bits.T2IE = 0; // Enable TRM2 interrupts
+    
+    // Clear global variables
+    l_pos_last_err = 0;
+    l_pos_integral = 0;
+    l_vel = 0;
+    l_vel_last_err = 0;
+    l_vel_integral = 0;
+    l_acc = 0;
+    l_acc_last_err = 0;
+    l_acc_integral = 0;
+    
+    r_pos_last_err = 0;
+    r_pos_integral = 0;
+    r_vel = 0;
+    r_vel_last_err = 0;
+    r_vel_integral = 0;
+    r_acc = 0;
+    r_acc_last_err = 0;
+    r_acc_integral = 0;
 }
 
 void set_motor_control_function(void (*motor_control_ptr)(void)) {
@@ -117,6 +164,8 @@ void enable_motor_control() {
     tmr_2_ticks = 0;
     l_qei_counter = 0;
     r_qei_counter = 0;
+    l_qei_last = 0;
+    r_qei_last = 0;
     controller_finished = 0;
     
     P1TCONbits.PTEN = 1; // Turn on PWM time base
@@ -154,28 +203,44 @@ void straight_controller() {
 void adjust_left_pwm(signed int adj);
 void adjust_right_pwm(signed int adj);
 
+static signed int R_POS_SP;
+static signed int L_POS_SP;
 void init_position_controller() {
     L_MTR_PER = L_MTR_MIN;
     R_MTR_PER = R_MTR_MIN;
-    R_QEI_CNT = R_QEI_ROT / 2;
-    L_QEI_CNT = L_QEI_ROT / 2;
     l_qei_counter = 0;
     r_qei_counter = 0;
+    R_POS_SP = R_QEI_CNT;
+    L_POS_SP = L_QEI_CNT;
+    
 }
 void position_controller() {
-    const double p_term = 7; 
-    const signed int SETPOINT = 1024 * 5 / 2;
+    
+    const double kp = 3; 
+    const double ki = 0.01;
+    const double kd = 13;
     
     const signed int r_err = 
-        -r_qei_counter * R_QEI_MAX - (signed)R_QEI_CNT + SETPOINT;
+        -r_qei_counter * R_QEI_MAX - (signed)R_QEI_CNT + R_POS_SP;
     const signed int l_err =
-        -l_qei_counter * L_QEI_MAX - (signed)L_QEI_CNT + SETPOINT;
+        -l_qei_counter * L_QEI_MAX - (signed)L_QEI_CNT + L_POS_SP;
         
-    const signed int r_adj = p_term * r_err;
-    const signed int l_adj = p_term * l_err;
+    const signed int r_out = 
+        P(r_err, kp) + 
+        I(r_err, r_pos_integral, CONTROL_DT, ki) +
+        D(r_err, r_pos_last_err, CONTROL_DT, kd);
+    
+    const signed int l_out = 
+        P(l_err, kp) +
+        I(l_err, l_pos_integral, CONTROL_DT, ki) +
+        D(l_err, l_pos_last_err, CONTROL_DT, kd);
+    
+    // Save last err
+    r_pos_last_err = r_err;
+    l_pos_last_err = l_err;
         
-    adjust_right_pwm(r_adj);
-    adjust_left_pwm(l_adj);
+    adjust_right_pwm(r_out);
+    adjust_left_pwm(l_out);
 }
 
 void turn_left_controller() {
@@ -303,8 +368,12 @@ void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
     
     tmr_2_ticks++;
     // Make pid adjustments
-    if(tmr_2_ticks == 2) {
+    if(tmr_2_ticks == CONTROL_DT) {
         tmr_2_ticks = 0;
+        
+        // Calculate velocity and acceleration
+        
+        // Call current motor controller function
         (*motor_control)();
     }
 }

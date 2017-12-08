@@ -12,12 +12,14 @@
 extern "C" {
 #endif
 
+    // FINISHED
+#define P(err, kp) (kp * err)
     
-#define P(err, kp) 5
+    // FINISHED - THIS SAVES NEW INTEGRAL TO integral AS WELL
+#define I(err, integral, dt, ki) ((integral = integral + err * dt) * ki)
     
-#define I(err, prev_int, dt, ki) 6
-    
-#define D(err, prev_err, dt, kd) 7
+    // FINISHED - DONT FORGET TO SAVE ERR TO PREV_ERR AFTER
+#define D(err, prev_err, dt, kd) (((err - prev_err) / dt) * kd)
 
 
 #ifdef	__cplusplus
