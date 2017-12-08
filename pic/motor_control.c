@@ -7,6 +7,13 @@
 // Global variables
 static volatile unsigned int tmr_2_ticks;
 
+// Sensor readings
+extern volatile unsigned int sl_sensor;
+extern volatile unsigned int sr_sensor;
+extern volatile unsigned int fl_sensor;
+extern volatile unsigned int fr_sensor;
+
+
 /*
  * 16-bit res @ 40MIPS = 1220 Hz edge-aligned
  * 11-bit res @ 40MIPS  39.1 kHz edge-aligned
@@ -89,8 +96,11 @@ void enable_motor_control() {
     T2CONbits.TON = 1; // Turn on timer2 
 }
 
+void simple_straight_controller() {
+    
+    
+}
 
-extern volatile unsigned int sl_sensor;
 // Goal of this function is to drive the left motor at a speed relative to 
 // the value of a sensor.
 void simple_velocity_controller() {

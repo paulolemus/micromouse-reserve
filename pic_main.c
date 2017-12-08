@@ -67,6 +67,9 @@
 #include "pic/motor_control.h"
 
 
+extern volatile unsigned int fr_sensor;
+
+
 /*
  * MIPS = million instructions per second
  * MAX = 40 MIPS = 40 Million instructions per second
@@ -94,8 +97,15 @@ int main(int argc, char** argv) {
     
     while(1) {
         
+        if(fr_sensor > FRD_CLOSE) {
+            L_MTR_PER = L_MTR_MIN;
+            R_MTR_PER = R_MTR_MIN;
+        } else {
+            L_MTR_PER = L_MTR_MIN / 2;
+            R_MTR_PER = R_MTR_MIN / 2;
+        }
         //simple_velocity_controller();
-        simple_position_controller();
+        //simple_position_controller();
     }
     
     return (EXIT_SUCCESS);

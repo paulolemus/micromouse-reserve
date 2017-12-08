@@ -35,6 +35,7 @@ extern "C" {
     // Testing functions for the motors
     void simple_velocity_controller();
     void simple_position_controller();
+    void simple_straight_controller();
 
 
 
