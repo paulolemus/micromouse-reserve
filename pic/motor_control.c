@@ -203,7 +203,6 @@ void __attribute__((__interrupt__, __shadow__, no_auto_psv)) _T2Interrupt(void) 
     
     tmr_2_ticks++;
     if(tmr_2_ticks == 1000) {
-        LED_R = 1;
         tmr_2_ticks = 0;
     }
 }

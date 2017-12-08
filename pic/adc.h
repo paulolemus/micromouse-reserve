@@ -19,11 +19,14 @@ extern "C" {
 #define SLD 7
 #define FRD 4
 #define SRD 5
+#define NUM_DETECTORS 4
 // Wall values
-#define FRD_CLOSE 900
-#define FLD_CLOSE
-#define SRD_CLOSE 750
-#define SLD_CLOSE 800
+#define FRD_CLOSE 900 // GOOD
+#define FLD_CLOSE 750 // kinda messed up
+#define SRD_CLOSE 750 // GOOD
+#define SLD_CLOSE 800 // GOOD
+    
+#define SELECT_DETECTOR(detector_id) (AD1CHS0bits.CH0SA = detector_id)
     
     
     /**

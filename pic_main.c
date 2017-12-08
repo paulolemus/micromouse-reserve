@@ -92,9 +92,6 @@ int main(int argc, char** argv) {
     enable_adc();
     enable_motor_control();
     
-    // Choose the SLD for scanning
-    AD1CHS0bits.CH0SA = SLD;
-    
     while(1) {
         
         //simple_velocity_controller();

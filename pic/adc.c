@@ -4,7 +4,10 @@
 #include "components/sensor.h"
 
 
+// Number of MS to wait before starting a new scanning sequence.
 static volatile unsigned int tmr_4_ticks;
+// ADC scan rotation
+static volatile unsigned int adc_rotation;
 
 // Global variables
 // Storage for sensor readings
@@ -12,6 +15,8 @@ volatile unsigned int sl_sensor;
 volatile unsigned int sr_sensor;
 volatile unsigned int fl_sensor;
 volatile unsigned int fr_sensor;
+
+#define CAPTURE_SCAN(sensor_var) (sensor_var = (sensor_var + ADC1BUF0) / 2)
 
 
 void init_adc() {
@@ -22,7 +27,9 @@ void init_adc() {
     // Configure ADC software module
     AD1CON1bits.ADON = 0; // Disable to configure
     AD1CON1bits.SSRC = 0b111; // End sample after internal counter time
-    AD1CON2bits.BUFM = 1; // Use a buffer for current and last scan
+    
+    AD1CON2bits.BUFM = 1; // Fill buffer from 0x0
+    
     AD1CON3bits.SAMC = 2; // 2 TAD for auto sample time
     AD1CON3bits.ADCS = 2; // 3 * Tcy = TAD, used for auto conversion
     
@@ -55,6 +62,11 @@ void enable_adc() {
     
     // Set state of global variables
     sl_sensor = SLD_CLOSE;
+    sr_sensor = SRD_CLOSE;
+    fl_sensor = FLD_CLOSE;
+    fr_sensor = FRD_CLOSE;
+    tmr_4_ticks = 0;
+    adc_rotation = 0;
     
     // Turn on emitters
     // TODO: Remove this portion
@@ -63,9 +75,13 @@ void enable_adc() {
     SLE = 1;
     SRE = 1;
     
+    // Select first sensor in rotation
+    // Rotation goes SLD, FLD, FRD, SRD
+    SELECT_DETECTOR(SLD);
+    
+    
     T4CONbits.TON = 1; // Turn on timer4  
     AD1CON1bits.ADON = 1; // Turn on
-    
 }
 
 void disable_adc() {
@@ -94,25 +110,54 @@ void __attribute__((__interrupt__, __shadow__, no_auto_psv)) _T4Interrupt(void) 
     
     if(tmr_4_ticks == 50) {
         // Convert here
-        //G_LED = ~G_LED;
         AD1CON1bits.SAMP = 1;
         tmr_4_ticks = 0;
     }
 }
 
 
+
 // Interrupt to save values from the four detectors once conversions finished.
+// Order of scan goes: SLD, FLD, FRD, SRD
 void __attribute__((__interrupt__, __shadow__, no_auto_psv)) _ADC1Interrupt(void) {
     IFS0bits.AD1IF = 0; // Clear conversion flag
 
-    // Average of two scans
-    sl_sensor = (sl_sensor + ADC1BUF0) / 2;
+    // Capture value from scan depending on adc rotation
+    switch(adc_rotation) {
+        case 0: CAPTURE_SCAN(sl_sensor); break;
+        case 1: CAPTURE_SCAN(fl_sensor); break;
+        case 2: CAPTURE_SCAN(fr_sensor); break;
+        case 3: CAPTURE_SCAN(sr_sensor); break;
+    }
     
+    // Rotate to next scan
+    adc_rotation = (adc_rotation + 1) % NUM_DETECTORS;
+    
+    // Move to next scan
+    switch(adc_rotation) {
+        case 0: SELECT_DETECTOR(SLD); break;
+        case 1: SELECT_DETECTOR(FLD); AD1CON1bits.SAMP = 1; break;
+        case 2: SELECT_DETECTOR(FRD); AD1CON1bits.SAMP = 1; break;
+        case 3: SELECT_DETECTOR(SRD); AD1CON1bits.SAMP = 1; break;
+    }
+    
+    // Check if sl is working
     if(sl_sensor > SLD_CLOSE) {
-        //B_LED = 1;
+        LED_ON(LED_R);
+    }
+    else {
+        LED_OFF(LED_R);
+    }
+    // Check if sr is working - GOOD
+    if(sr_sensor > SRD_CLOSE) {
+        LED_ON(LED_G);
+    } else {
+        LED_OFF(LED_G);
+    }
+    // Check if fr is working - GOOD
+    if(fr_sensor > FRD_CLOSE) {
         LED_ON(LED_B);
     } else {
-        //B_LED = 0;
         LED_OFF(LED_B);
     }
 }
