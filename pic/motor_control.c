@@ -1,7 +1,10 @@
 #include <xc.h>
-#include "motor_control.h"
-#include "adc.h"
+
 #include "components/led.h"
+
+#include "adc.h"
+#include "motor_control.h"
+#include "pid.h"
 
 
 // Global variables
@@ -163,8 +166,6 @@ void position_controller() {
     const double p_term = 7; 
     const signed int SETPOINT = 1024 * 5 / 2;
     
-    //const signed int r_err = SETPOINT - (signed)R_QEI_CNT;
-    //const signed int l_err = SETPOINT - (signed)L_QEI_CNT;
     const signed int r_err = 
         -r_qei_counter * R_QEI_MAX - (signed)R_QEI_CNT + SETPOINT;
     const signed int l_err =

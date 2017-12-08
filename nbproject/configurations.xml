@@ -12,6 +12,7 @@
       <itemPath>pic/adc.h</itemPath>
       <itemPath>pic/motor_control.h</itemPath>
       <itemPath>pic/procedures/straights_procedure.h</itemPath>
+      <itemPath>pic/pid.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
