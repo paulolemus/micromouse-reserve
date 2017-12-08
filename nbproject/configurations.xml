@@ -11,6 +11,7 @@
       <itemPath>pic/components/encoder.h</itemPath>
       <itemPath>pic/adc.h</itemPath>
       <itemPath>pic/motor_control.h</itemPath>
+      <itemPath>pic/procedures/straights_procedure.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -26,6 +27,7 @@
       <itemPath>pic/components/encoder.c</itemPath>
       <itemPath>pic/adc.c</itemPath>
       <itemPath>pic/motor_control.c</itemPath>
+      <itemPath>pic/procedures/straights_procedure.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

@@ -108,7 +108,7 @@ void __attribute__((__interrupt__, __shadow__, no_auto_psv)) _T4Interrupt(void) 
 
     tmr_4_ticks++;
     
-    if(tmr_4_ticks == 50) {
+    if(tmr_4_ticks == 1) {
         // Convert here
         AD1CON1bits.SAMP = 1;
         tmr_4_ticks = 0;
@@ -150,14 +150,14 @@ void __attribute__((__interrupt__, __shadow__, no_auto_psv)) _ADC1Interrupt(void
     }
     // Check if sr is working - GOOD
     if(sr_sensor > SRD_CLOSE) {
-        LED_ON(LED_G);
+        //LED_ON(LED_G);
     } else {
-        LED_OFF(LED_G);
+        //LED_OFF(LED_G);
     }
     // Check if fr is working - GOOD
     if(fr_sensor > FRD_CLOSE) {
-        LED_ON(LED_B);
+        //LED_ON(LED_B);
     } else {
-        LED_OFF(LED_B);
+        //LED_OFF(LED_B);
     }
 }

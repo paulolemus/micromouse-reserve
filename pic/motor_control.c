@@ -6,6 +6,11 @@
 
 // Global variables
 static volatile unsigned int tmr_2_ticks;
+static volatile signed int l_qei_counter;
+static volatile signed int r_qei_counter;
+
+// Indication that a controller has completed its task, or reached a steady state.
+volatile unsigned int controller_finished;
 
 // Sensor readings
 extern volatile unsigned int sl_sensor;
@@ -13,6 +18,10 @@ extern volatile unsigned int sr_sensor;
 extern volatile unsigned int fl_sensor;
 extern volatile unsigned int fr_sensor;
 
+
+
+// Function to execute to control the motors every scan period.
+static void (*motor_control)(void);
 
 /*
  * 16-bit res @ 40MIPS = 1220 Hz edge-aligned
@@ -68,11 +77,20 @@ void init_motor_control() {
     
     QEI1CONbits.SWPAB = 1; // QEI1 swap so forward counts +
     
-    POS1CNT = 0; // Reset position counter to 0
-    POS2CNT = 0; // Reset position counter to 0
+    R_QEI_CNT = 0; // Reset position counter to 0
+    L_QEI_CNT = 0; // Reset position counter to 0
     
-    MAX1CNT = 1024 * 5; // Resets every 1024 slots
-    MAX2CNT = 1024 * 5; // Resets every 1024 slots
+    R_QEI_MAX = R_QEI_ROT; // Resets every 5120 slots - 1 rotation
+    L_QEI_MAX = L_QEI_ROT; // Resets every 5120 slots - 1 rotation
+    
+    // QEI Interrupt setup
+    IPC14bits.QEI1IP = 4; // Priority lvl4
+    IPC18bits.QEI2IP = 4; // Priority lvl4
+    IFS3bits.QEI1IF = 0; // Clear flag
+    IFS4bits.QEI2IF = 0; // Clear flag
+    IEC3bits.QEI1IE = 0; // Disable interrupts
+    IEC4bits.QEI2IE = 0; // Disable interrupts
+    
     
     
     // Init timer 2 used for PID updating
@@ -87,23 +105,94 @@ void init_motor_control() {
     IEC0bits.T2IE = 0; // Enable TRM2 interrupts
 }
 
+void set_motor_control_function(void (*motor_control_ptr)(void)) {
+    motor_control = motor_control_ptr;
+}
+
 void enable_motor_control() {
+    
+    tmr_2_ticks = 0;
+    l_qei_counter = 0;
+    r_qei_counter = 0;
+    controller_finished = 0;
     
     P1TCONbits.PTEN = 1; // Turn on PWM time base
     P2TCONbits.PTEN = 1; // Turn on PWM time base
     
+    IFS0bits.T2IF = 0; // Turn off interrupt flag
     IEC0bits.T2IE = 1; // Enable TRM2 interrupts
+    
+    IFS3bits.QEI1IF = 0; // Clear flag
+    IFS4bits.QEI2IF = 0; // Clear flag
+    IEC3bits.QEI1IE = 1; // Enable interrupts
+    IEC4bits.QEI2IE = 1; // Enable interrupts
+    
     T2CONbits.TON = 1; // Turn on timer2 
 }
 
-void simple_straight_controller() {
+
+
+/*
+ * MOTOR CONTROL FUNCTIONS
+ * 
+ * Each controller is coupled with an init function to set initial state.
+ * Each controller also has coupled global state.
+ */
+
+void init_straight_controller() {
+    // Does nothing
+}
+void straight_controller() {
     
+    L_MTR_PER = L_MTR_MIN / 4;
+    R_MTR_PER = R_MTR_MIN / 4;
+}
+
+void adjust_left_pwm(signed int adj);
+void adjust_right_pwm(signed int adj);
+
+void init_position_controller() {
+    L_MTR_PER = L_MTR_MIN;
+    R_MTR_PER = R_MTR_MIN;
+    R_QEI_CNT = R_QEI_ROT / 2;
+    L_QEI_CNT = L_QEI_ROT / 2;
+    l_qei_counter = 0;
+    r_qei_counter = 0;
+}
+void position_controller() {
+    const double p_term = 7; 
+    const signed int SETPOINT = 1024 * 5 / 2;
+    
+    //const signed int r_err = SETPOINT - (signed)R_QEI_CNT;
+    //const signed int l_err = SETPOINT - (signed)L_QEI_CNT;
+    const signed int r_err = 
+        -r_qei_counter * R_QEI_MAX - (signed)R_QEI_CNT + SETPOINT;
+    const signed int l_err =
+        -l_qei_counter * L_QEI_MAX - (signed)L_QEI_CNT + SETPOINT;
+        
+    const signed int r_adj = p_term * r_err;
+    const signed int l_adj = p_term * l_err;
+        
+    adjust_right_pwm(r_adj);
+    adjust_left_pwm(l_adj);
+}
+
+void turn_left_controller() {
     
 }
 
+void turn_right_controller() {
+    
+}
+
+void turn_around_controller() {
+    
+}
+
+
 // Goal of this function is to drive the left motor at a speed relative to 
 // the value of a sensor.
-void simple_velocity_controller() {
+void simple_velocity_tester() {
     
     const double P_TERM = 5.0;
     const unsigned int SENSOR_SETPOINT = SLD_CLOSE;
@@ -146,7 +235,7 @@ void adjust_left_pwm(signed int adj) {
         
     } else {
         // Trying to drive backwards
-        L_MTR_DIR = ~L_MTR_FWD;
+        L_MTR_DIR = L_MTR_REV;
         adj = L_MTR_MIN + adj;
         if(adj > L_MTR_MIN) adj = L_MTR_MIN;
         if(adj < L_MTR_MAX) adj = L_MTR_MAX;
@@ -170,7 +259,7 @@ void adjust_right_pwm(signed int adj) {
         
     } else {
         // Trying to drive backwards
-        R_MTR_DIR = ~R_MTR_FWD;
+        R_MTR_DIR = R_MTR_REV;
         adj = R_MTR_MIN + adj;
         if(adj > R_MTR_MIN) adj = R_MTR_MIN;
         if(adj < R_MTR_MAX) adj = R_MTR_MAX;
@@ -179,7 +268,7 @@ void adjust_right_pwm(signed int adj) {
 }
 
 
-void simple_position_controller() {
+void simple_position_tester() {
     
     const double p_term = 7; 
     const signed int SETPOINT = 1024 * 5 / 2;
@@ -207,12 +296,41 @@ void simple_position_controller() {
 }
 
 
-// Timer in charge of motor control - PID adjustments - every 1 ms
-void __attribute__((__interrupt__, __shadow__, no_auto_psv)) _T2Interrupt(void) {
+// Timer in charge of motor control - PID adjustments - every 2 ms
+void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
     IFS0bits.T2IF = 0; // Clear T2 interrupt flag
     
     tmr_2_ticks++;
-    if(tmr_2_ticks == 1000) {
+    // Make pid adjustments
+    if(tmr_2_ticks == 2) {
         tmr_2_ticks = 0;
+        (*motor_control)();
+    }
+}
+
+
+// QEI overflows for right motor
+void __attribute__((__interrupt__, no_auto_psv)) _QEI1Interrupt(void) {
+    IFS3bits.QEI1IF = 0; // Clear flag
+    
+    if(R_QEI_CNT > R_QEI_ROT / 2) {
+        // If CNT is now max, it underflowed - moving backwards
+        r_qei_counter--;
+    } else {
+        // If CNT is now 0, it overflowed - moving forward
+        r_qei_counter++;
+    }
+}
+
+// QEI overflows for left motor
+void __attribute__((__interrupt__, no_auto_psv)) _QEI2Interrupt(void) {
+    IFS4bits.QEI2IF = 0; // Clear flag
+    
+    if(L_QEI_CNT > L_QEI_ROT / 2) {
+        // If CNT is now max, it underflowed - moving backwards
+        l_qei_counter--;
+    } else {
+        // If CNT is now 0, it overflowed - moving forward
+        l_qei_counter++;
     }
 }

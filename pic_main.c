@@ -62,9 +62,12 @@
 #include "pic/components/led.h"
 #include "pic/components/sensor.h"
 #include "pic/components/encoder.h"
-#include "pic/components//motor.h"
+#include "pic/components/motor.h"
+
 #include "pic/adc.h"
 #include "pic/motor_control.h"
+
+#include "pic/procedures/straights_procedure.h"
 
 
 extern volatile unsigned int fr_sensor;
@@ -91,21 +94,14 @@ int main(int argc, char** argv) {
     init_adc();
     init_motor_control();
     
-    // Enable modules
-    enable_adc();
-    enable_motor_control();
     
+    // Run primary procedures in this while loop.
+    // The procedures are long lived programs that complete a specific task,
+    // such as mapping a maze, speedrunning, or waiting for commands.
     while(1) {
         
-        if(fr_sensor > FRD_CLOSE) {
-            L_MTR_PER = L_MTR_MIN;
-            R_MTR_PER = R_MTR_MIN;
-        } else {
-            L_MTR_PER = L_MTR_MIN / 2;
-            R_MTR_PER = R_MTR_MIN / 2;
-        }
-        //simple_velocity_controller();
-        //simple_position_controller();
+        straights_stop_procedure();
+        
     }
     
     return (EXIT_SUCCESS);
