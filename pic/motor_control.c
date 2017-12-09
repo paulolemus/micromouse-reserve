@@ -295,13 +295,13 @@ void track_controller() {
     const double vel_kp = 2;
     const double vel_kd = 0.6;
     
-    const double l_sns_kp = 1.1;
+    const double l_sns_kp = 1.3;
     const double l_sns_ki = 0.0;
-    const double l_sns_kd = 0.5;
+    const double l_sns_kd = 0.6;
     
-    const double r_sns_kp = 1.1;
+    const double r_sns_kp = 1.3;
     const double r_sns_ki = 0.005;
-    const double r_sns_kd = 1.5;
+    const double r_sns_kd = 1.6;
 
     signed int l_sns_err = 0;
     signed int r_sns_err = 0;

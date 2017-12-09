@@ -22,7 +22,7 @@ extern volatile unsigned int controller_finished;
 #define AROUND_MS 1000
 
 // Sensor adjustments
-#define SL_ADJ 1
+#define SL_ADJ 50
 #define SR_ADJ 10
 
 /**
@@ -52,7 +52,7 @@ void left_hugger_procedure() {
     while(1) {
         
         // Poll sensors
-        if(sl_sensor < SLD_FAR - SL_ADJ) left_open = 1;
+        if(sl_sensor < SLD_FAR + SL_ADJ) left_open = 1;
         else                             left_open = 0;
         if(fr_sensor < FRD_CLOSE) front_open = 1;
         else                      front_open = 0;
@@ -62,7 +62,7 @@ void left_hugger_procedure() {
         if(left_open || !front_open) {
             
             wait_ms(3);
-            if(sl_sensor < SLD_FAR - SL_ADJ) {
+            if(sl_sensor < SLD_FAR + SL_ADJ) {
                 left_open = 1;
             } else {
                 left_open = 0;

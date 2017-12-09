@@ -3,11 +3,14 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/home/paulo/MPLABXProjects/ds_test_code.X/pic/motor_control.c</file>
             <file>file:/home/paulo/MPLABXProjects/ds_test_code.X/pic/pid.h</file>
+            <file>file:/home/paulo/MPLABXProjects/ds_test_code.X/pic/motor_control.c</file>
             <file>file:/home/paulo/MPLABXProjects/ds_test_code.X/pic/adc.c</file>
             <file>file:/home/paulo/MPLABXProjects/ds_test_code.X/pic/motor_control.h</file>
-            <file>file:/home/paulo/MPLABXProjects/ds_test_code.X/pic/procedures/straights_procedure.c</file>
+            <file>file:/home/paulo/MPLABXProjects/ds_test_code.X/pic/adc.h</file>
+            <file>file:/home/paulo/MPLABXProjects/ds_test_code.X/pic/procedures/hug_procedure.c</file>
+            <file>file:/home/paulo/MPLABXProjects/ds_test_code.X/pic/wait.c</file>
+            <file>file:/home/paulo/MPLABXProjects/ds_test_code.X/pic/procedures/explore_procedure.c</file>
             <file>file:/home/paulo/MPLABXProjects/ds_test_code.X/pic_main.c</file>
         </group>
     </open-files>
