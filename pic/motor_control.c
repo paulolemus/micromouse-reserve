@@ -272,8 +272,8 @@ static signed int l_sns_integral;
 static signed int r_sns_integral;
 void init_track_controller() {
     // Desired velocity is 10 ticks / ms, or 2 revolutions / sec
-    L_TRK_VEL_SP = 1400; 
-    R_TRK_VEL_SP = 1400; 
+    L_TRK_VEL_SP = 1800; 
+    R_TRK_VEL_SP = 1800; 
     
     // Desired readings for sensors
     L_TRK_SNS_SP = SLD_CLOSE - 50;

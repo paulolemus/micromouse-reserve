@@ -28,8 +28,8 @@ extern "C" {
     
 #define FRD_FAR 500 // GOOD
 #define FLD_FAR 100 // kinda messed up
-#define SRD_FAR 350 // GOOD
-#define SLD_FAR 450 // GOOD
+#define SRD_FAR 330 // GOOD
+#define SLD_FAR 425 // GOOD
     
 #define ADC_DT 1 // 1 ms
     

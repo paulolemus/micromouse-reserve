@@ -70,6 +70,7 @@
 #include "pic/procedures/straights_procedure.h"
 #include "pic/procedures/startup_procedure.h"
 #include "pic/procedures//explore_procedure.h"
+#include "pic/procedures//hug_procedure.h"
 
 
 extern unsigned int mode_selected;
@@ -119,12 +120,12 @@ int main(int argc, char** argv) {
             // GREEN MODE
         } else if(mode_selected == 1) {
             
-            
+            right_hugger_procedure();
             
             // BLUE MODE
         } else if(mode_selected == 2) {
             
-            
+            left_hugger_procedure();
             
         }
     }

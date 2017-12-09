@@ -16,6 +16,7 @@
       <itemPath>pic/wait.h</itemPath>
       <itemPath>pic/procedures/startup_procedure.h</itemPath>
       <itemPath>pic/procedures/explore_procedure.h</itemPath>
+      <itemPath>pic/procedures/hug_procedure.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -35,6 +36,7 @@
       <itemPath>pic/wait.c</itemPath>
       <itemPath>pic/procedures/startup_procedure.c</itemPath>
       <itemPath>pic/procedures/explore_procedure.c</itemPath>
+      <itemPath>pic/procedures/hug_procedure.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

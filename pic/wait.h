@@ -23,7 +23,7 @@ extern "C" {
      * Flips global variable when the timer is finished.
      * @param ms
      */
-    void nonblock_wait_ms(unsigned int ms);
+    void nonblock_wait_ms(const unsigned int ms);
     
 
 
