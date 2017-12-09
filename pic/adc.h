@@ -23,8 +23,10 @@ extern "C" {
 // Wall values
 #define FRD_CLOSE 900 // GOOD
 #define FLD_CLOSE 750 // kinda messed up
-#define SRD_CLOSE 750 // GOOD
-#define SLD_CLOSE 800 // GOOD
+#define SRD_CLOSE 550 // GOOD
+#define SLD_CLOSE 720 // GOOD
+    
+#define ADC_DT 1 // 1 ms
     
 #define SELECT_DETECTOR(detector_id) (AD1CHS0bits.CH0SA = detector_id)
     

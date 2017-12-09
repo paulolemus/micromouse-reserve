@@ -68,6 +68,7 @@
 #include "pic/motor_control.h"
 
 #include "pic/procedures/straights_procedure.h"
+#include "pic/procedures/startup_procedure.h"
 
 
 extern volatile unsigned int fr_sensor;
@@ -100,8 +101,10 @@ int main(int argc, char** argv) {
     // such as mapping a maze, speedrunning, or waiting for commands.
     while(1) {
         
-        straights_stop_procedure();
+        startup_procedure();
         
+        //straights_stop_procedure();
+        spin_procedure();
     }
     
     return (EXIT_SUCCESS);

@@ -53,6 +53,10 @@ extern volatile unsigned int sl_sensor;
 extern volatile unsigned int sr_sensor;
 extern volatile unsigned int fl_sensor;
 extern volatile unsigned int fr_sensor;
+extern volatile unsigned int sl_last;
+extern volatile unsigned int sr_last;
+extern volatile unsigned int fl_last;
+extern volatile unsigned int fr_last;
 
 // Function to execute to control the motors every scan period.
 static void (*volatile motor_control)(void);
@@ -78,8 +82,7 @@ void init_motor_control() {
     LATBbits.LATB14 = 1;
     R_MTR_DIR = R_MTR_FWD; // direction
     L_MTR_DIR = L_MTR_FWD;
-    LATAbits.LATA10 = 1; // Brakes
-    LATCbits.LATC9  = 1;
+    unbrake();
     
  
     // Init pwm software module
@@ -172,6 +175,8 @@ void enable_motor_control() {
     r_qei_last = 0;
     controller_finished = 0;
     
+    unbrake();
+    
     P1TCONbits.PTEN = 1; // Turn on PWM time base
     P2TCONbits.PTEN = 1; // Turn on PWM time base
     
@@ -187,6 +192,17 @@ void enable_motor_control() {
 }
 
 
+void brake() {
+    LATAbits.LATA10 = 0; // Brakes on
+    LATCbits.LATC9 = 0;
+}
+
+void unbrake() {
+    LATAbits.LATA10 = 1; // Brakes off
+    LATCbits.LATC9  = 1;
+}
+
+
 
 /*
  * MOTOR CONTROL FUNCTIONS
@@ -199,8 +215,8 @@ static signed int L_STR_VEL_SP;
 static signed int R_STR_VEL_SP;
 void init_straight_controller() {
     // Desired velocity is 10 ticks / ms, or 2 revolutions / sec
-    L_STR_VEL_SP = 800; 
-    R_STR_VEL_SP = 800; 
+    L_STR_VEL_SP = 850; 
+    R_STR_VEL_SP = 850; 
     
     // Will always drive forward
     L_MTR_PER = L_MTR_MIN;
@@ -210,9 +226,8 @@ void init_straight_controller() {
 }
 void straight_controller() {
     
-    const double kp = 9;
-    const double ki = 0.05;
-    const double kd = 10;
+    const double kp = 2;
+    const double kd = 0.5;
     
     // Calculate error in velocity
     const signed int l_vel_err = L_STR_VEL_SP - l_vel;
@@ -221,22 +236,131 @@ void straight_controller() {
     // Calculate PID correction value for straight driving
     const signed l_out =
         P(l_vel_err, kp) +
-        I(l_vel_err, l_vel_integral, CONTROL_DT, ki) +
         D(l_vel_err, l_vel_last_err, CONTROL_DT, kd);
     
     const signed r_out =
         P(r_vel_err, kp) +
-        I(r_vel_err, r_vel_integral, CONTROL_DT, ki) +
         D(r_vel_err, r_vel_last_err, CONTROL_DT, kd);
     
     // Save last error for derivative later
     l_vel_last_err = l_vel_err;
     r_vel_last_err = r_vel_err;
     
-    // Calculate and add PID correction for pushing off wall
-    
     // Make adjustments to the duty cycle of each motor
     
+    // Left motor
+    signed l_per = L_MTR_PER - l_out;
+    if(l_per < L_MTR_MAX) l_per = L_MTR_MAX;
+    else if(l_per > L_MTR_MIN) l_per = L_MTR_MIN;
+    L_MTR_PER = l_per;
+    
+    // Right motor
+    signed r_per = R_MTR_PER - r_out;
+    if(r_per < R_MTR_MAX) r_per = R_MTR_MAX;
+    else if(r_per > R_MTR_MIN) r_per = R_MTR_MIN;
+    R_MTR_PER = r_per;
+}
+
+static signed int L_TRK_VEL_SP;
+static signed int R_TRK_VEL_SP;
+static unsigned int L_TRK_SNS_SP;
+static unsigned int R_TRK_SNS_SP;
+
+static signed int l_sns_prev_err;
+static signed int r_sns_prev_err;
+static signed int l_sns_integral;
+static signed int r_sns_integral;
+void init_track_controller() {
+    // Desired velocity is 10 ticks / ms, or 2 revolutions / sec
+    L_TRK_VEL_SP = 1300; 
+    R_TRK_VEL_SP = 1300; 
+    
+    // Desired readings for sensors
+    L_TRK_SNS_SP = SLD_CLOSE - 50;
+    R_TRK_SNS_SP = SRD_CLOSE - 50;
+    
+    l_sns_prev_err = 0;
+    r_sns_prev_err = 0;
+    l_sns_integral = 0;
+    r_sns_integral = 0;
+    
+    // Will always drive forward
+    L_MTR_PER = L_MTR_MIN;
+    R_MTR_PER = R_MTR_MIN;
+    L_MTR_DIR = L_MTR_FWD;
+    R_MTR_DIR = R_MTR_FWD;
+}
+void track_controller() {
+    // PID values
+    const double vel_kp = 2;
+    const double vel_kd = 0.6;
+    
+    const double l_sns_kp = 1.1;
+    const double l_sns_ki = 0.0;
+    const double l_sns_kd = 0.5;
+    
+    const double r_sns_kp = 1.1;
+    const double r_sns_ki = 0.005;
+    const double r_sns_kd = 1.5;
+
+    signed int l_sns_err = 0;
+    signed int r_sns_err = 0;
+    signed int sns_out = 0;
+    
+    LED_OFF(LED_R);
+    LED_OFF(LED_G);
+    
+    // Select a motor to use
+    if(sr_sensor > SRD_CLOSE - 310) {
+        LED_ON(LED_G);
+        // Use right motor
+        r_sns_err = R_TRK_SNS_SP - sr_sensor;
+        
+        sns_out =
+            P(r_sns_err, r_sns_kp) +
+            I(r_sns_err, r_sns_integral, ADC_DT, r_sns_ki) +
+            D(r_sns_err, r_sns_prev_err, ADC_DT, r_sns_kd);
+    
+        
+    } else if(sl_sensor > SLD_CLOSE - 310) {
+        LED_ON(LED_R);
+        // Use left motor
+        l_sns_err = sl_sensor - L_TRK_SNS_SP;
+        
+        sns_out =
+            P(l_sns_err, l_sns_kp) +
+            I(l_sns_err, l_sns_integral, ADC_DT, l_sns_ki) +
+            D(l_sns_err, l_sns_prev_err, ADC_DT, l_sns_kd);
+    } else {
+        
+    }
+    
+    
+    // Calculate error in velocity
+    const signed int l_vel_err = L_TRK_VEL_SP - l_vel;
+    const signed int r_vel_err = R_TRK_VEL_SP - r_vel;
+    
+    // Calculate PD correction value for straight driving AND tracking
+    const signed l_out =
+        P(l_vel_err, vel_kp) +
+        D(l_vel_err, l_vel_last_err, CONTROL_DT, vel_kd) +
+        sns_out;
+        
+    const signed r_out =
+        P(r_vel_err, vel_kp) +
+        D(r_vel_err, r_vel_last_err, CONTROL_DT, vel_kd) -
+        sns_out;
+    
+    
+    // Save last velocity error for derivative later
+    l_vel_last_err = l_vel_err;
+    r_vel_last_err = r_vel_err;
+    // Save last sensor error for derivative later
+    l_sns_prev_err = l_sns_err;
+    r_sns_prev_err = r_sns_err;
+    
+    
+    // Make adjustments to the duty cycle of each motor
     // Left motor
     signed l_per = L_MTR_PER - l_out;
     if(l_per < L_MTR_MAX) l_per = L_MTR_MAX;
@@ -269,7 +393,7 @@ void init_position_controller() {
 void position_controller() {
     
     const double kp = 3; 
-    const double ki = 0.01;
+    const double ki = 0.005;
     const double kd = 13;
     
     const signed int r_err = 
@@ -334,46 +458,265 @@ void position_controller() {
     R_MTR_PER = r_out;
 }
 
+
+static signed int L_LEFT_POS_SP;
+static signed int R_LEFT_POS_SP;
+static signed int L_LEFT_POS_QEI_SP;
+static signed int R_LEFT_POS_QEI_SP;
+void init_left_controller() {
+    L_MTR_PER = L_MTR_MIN;
+    R_MTR_PER = R_MTR_MIN;
+
+    L_LEFT_POS_QEI_SP = l_qei_curr;
+    R_LEFT_POS_QEI_SP = r_qei_curr;
+    
+    L_LEFT_POS_SP = L_QEI_CNT - L_QEI_ROT / 1.6;
+    R_LEFT_POS_SP = R_QEI_CNT + R_QEI_ROT / 1.6;
+}
 void turn_left_controller() {
+    const double MAX_SPD_DIV = 1.3;
+    const double kp = 2; 
+    const double ki = 0.001;
+    const double kd = 7;
     
-}
-
-void turn_right_controller() {
-    
-}
-
-void turn_around_controller() {
-    
-}
-
-/*
-// Goal of this function is to drive the left motor at a speed relative to 
-// the value of a sensor.
-void simple_velocity_tester() {
-    
-    const double P_TERM = 5.0;
-    const unsigned int SENSOR_SETPOINT = SLD_CLOSE;
-    const unsigned L_SPEED_SETPOINT = L_MTR_MIN / 2;
-    const unsigned R_SPEED_SETPOINT = R_MTR_MIN / 2;
-    
-    while(1) {
-        const signed int sensor_err = SENSOR_SETPOINT - sl_sensor;
-        const signed int p_adj = sensor_err * P_TERM;
+    const signed int l_err =
+        (L_LEFT_POS_QEI_SP - l_qei_curr) * L_QEI_MAX - (signed)L_QEI_CNT + L_LEFT_POS_SP;
+    const signed int r_err = 
+        (R_LEFT_POS_QEI_SP - r_qei_curr) * R_QEI_MAX - (signed)R_QEI_CNT + R_LEFT_POS_SP;
         
-        signed int l_mtr_per = L_SPEED_SETPOINT + p_adj;
-        signed int r_mtr_per = R_SPEED_SETPOINT + p_adj;
+    
+    signed int l_out = 
+        P(l_err, kp) +
+        I(l_err, l_pos_integral, CONTROL_DT, ki) +
+        D(l_err, l_pos_last_err, CONTROL_DT, kd);
+    
+    signed int r_out = 
+        P(r_err, kp) +
+        I(r_err, r_pos_integral, CONTROL_DT, ki) +
+        D(r_err, r_pos_last_err, CONTROL_DT, kd);
+    
+    // Save last err
+    l_pos_last_err = l_err;
+    r_pos_last_err = r_err;  
+    
+    // Make motor adjustments for right and left motors separately
+    
+    
+    if(l_out > 0) {
+        // Trying to drive forward
+        L_MTR_DIR = L_MTR_FWD;
+        l_out = L_MTR_MIN - l_out;
         
-        if(l_mtr_per > L_MTR_MIN) l_mtr_per = L_MTR_MIN;
-        else if(l_mtr_per < L_MTR_MAX) l_mtr_per = L_MTR_MAX;
-        
-        if(r_mtr_per > R_MTR_MIN) r_mtr_per = R_MTR_MIN;
-        else if(r_mtr_per < R_MTR_MAX) r_mtr_per = R_MTR_MAX;
-        
-        L_MTR_PER = l_mtr_per;
-        R_MTR_PER = r_mtr_per;
+    } else {
+        // Trying to drive backwards
+        L_MTR_DIR = L_MTR_REV;
+        l_out = L_MTR_MIN + l_out;
     }
+    
+    // Guard overflow
+    if(l_out < L_MTR_MIN / MAX_SPD_DIV) {
+        l_out = L_MTR_MIN / MAX_SPD_DIV;
+    } else if(l_out > L_MTR_MIN) {
+        l_out = L_MTR_MIN;
+    }
+    L_MTR_PER = l_out;
+    
+    
+    if(r_out > 0) {
+        // Trying to drive forward
+        R_MTR_DIR = R_MTR_FWD;
+        r_out = R_MTR_MIN - r_out;
+        
+    } else {
+        // Trying to drive backwards
+        R_MTR_DIR = R_MTR_REV;
+        r_out = R_MTR_MIN + r_out;
+    }
+    
+    // Guard overflow
+    if(r_out > R_MTR_MIN) {
+        r_out = R_MTR_MIN;
+    } else if(r_out < R_MTR_MIN / MAX_SPD_DIV) {
+        r_out = R_MTR_MIN / MAX_SPD_DIV;
+    }
+    R_MTR_PER = r_out;
 }
-*/
+
+static signed int L_RIGHT_POS_SP;
+static signed int R_RIGHT_POS_SP;
+static signed int L_RIGHT_POS_QEI_SP;
+static signed int R_RIGHT_POS_QEI_SP;
+void init_right_controller() {
+    L_MTR_PER = L_MTR_MIN;
+    R_MTR_PER = R_MTR_MIN;
+
+    L_RIGHT_POS_QEI_SP = l_qei_curr;
+    R_RIGHT_POS_QEI_SP = r_qei_curr;
+    
+    L_RIGHT_POS_SP = L_QEI_CNT + L_QEI_ROT / 1.6;
+    R_RIGHT_POS_SP = R_QEI_CNT - R_QEI_ROT / 1.6;
+}
+void turn_right_controller() {
+    const double MAX_SPD_DIV = 1.3;
+    const double kp = 2; 
+    const double ki = 0.001;
+    const double kd = 7;
+    
+    const signed int l_err =
+        (L_RIGHT_POS_QEI_SP - l_qei_curr) * L_QEI_MAX - (signed)L_QEI_CNT + L_RIGHT_POS_SP;
+    const signed int r_err = 
+        (R_RIGHT_POS_QEI_SP - r_qei_curr) * R_QEI_MAX - (signed)R_QEI_CNT + R_RIGHT_POS_SP;
+        
+    
+    signed int l_out = 
+        P(l_err, kp) +
+        I(l_err, l_pos_integral, CONTROL_DT, ki) +
+        D(l_err, l_pos_last_err, CONTROL_DT, kd);
+    
+    signed int r_out = 
+        P(r_err, kp) +
+        I(r_err, r_pos_integral, CONTROL_DT, ki) +
+        D(r_err, r_pos_last_err, CONTROL_DT, kd);
+    
+    // Save last err
+    l_pos_last_err = l_err;
+    r_pos_last_err = r_err;  
+    
+    // Make motor adjustments for right and left motors separately
+    
+    
+    if(l_out > 0) {
+        // Trying to drive forward
+        L_MTR_DIR = L_MTR_FWD;
+        l_out = L_MTR_MIN - l_out;
+        
+    } else {
+        // Trying to drive backwards
+        L_MTR_DIR = L_MTR_REV;
+        l_out = L_MTR_MIN + l_out;
+    }
+    
+    // Guard overflow
+    if(l_out < L_MTR_MIN / MAX_SPD_DIV) {
+        l_out = L_MTR_MIN / MAX_SPD_DIV;
+    } else if(l_out > L_MTR_MIN) {
+        l_out = L_MTR_MIN;
+    }
+    L_MTR_PER = l_out;
+    
+    
+    if(r_out > 0) {
+        // Trying to drive forward
+        R_MTR_DIR = R_MTR_FWD;
+        r_out = R_MTR_MIN - r_out;
+        
+    } else {
+        // Trying to drive backwards
+        R_MTR_DIR = R_MTR_REV;
+        r_out = R_MTR_MIN + r_out;
+    }
+    
+    // Guard overflow
+    if(r_out > R_MTR_MIN) {
+        r_out = R_MTR_MIN;
+    } else if(r_out < R_MTR_MIN / MAX_SPD_DIV) {
+        r_out = R_MTR_MIN / MAX_SPD_DIV;
+    }
+    R_MTR_PER = r_out;
+}
+
+static signed int L_ROUND_POS_SP;
+static signed int R_ROUND_POS_SP;
+static signed int L_ROUND_POS_QEI_SP;
+static signed int R_ROUND_POS_QEI_SP;
+void init_around_controller() {
+    L_MTR_PER = L_MTR_MIN;
+    R_MTR_PER = R_MTR_MIN;
+
+    L_ROUND_POS_QEI_SP = l_qei_curr;
+    R_ROUND_POS_QEI_SP = r_qei_curr;
+    
+    L_ROUND_POS_SP = L_QEI_CNT + (L_QEI_ROT / 1.6) * 2;
+    R_ROUND_POS_SP = R_QEI_CNT - (R_QEI_ROT / 1.6) * 2;
+}
+void turn_around_controller() {
+    const double MAX_SPD_DIV = 1.2;
+    const double kp = 1.9; 
+    const double ki = 0.001;
+    const double kd = 20;
+    
+    const signed int l_err =
+        (L_ROUND_POS_QEI_SP - l_qei_curr) * L_QEI_MAX - (signed)L_QEI_CNT + L_ROUND_POS_SP;
+    const signed int r_err = 
+        (R_ROUND_POS_QEI_SP - r_qei_curr) * R_QEI_MAX - (signed)R_QEI_CNT + R_ROUND_POS_SP;
+        
+    
+    signed int l_out = 
+        P(l_err, kp) +
+        I(l_err, l_pos_integral, CONTROL_DT, ki) +
+        D(l_err, l_pos_last_err, CONTROL_DT, kd);
+    
+    signed int r_out = 
+        P(r_err, kp) +
+        I(r_err, r_pos_integral, CONTROL_DT, ki) +
+        D(r_err, r_pos_last_err, CONTROL_DT, kd);
+    
+    // Save last err
+    l_pos_last_err = l_err;
+    r_pos_last_err = r_err;  
+    
+    // Make motor adjustments for right and left motors separately
+    
+    
+    if(l_out > 0) {
+        // Trying to drive forward
+        L_MTR_DIR = L_MTR_FWD;
+        l_out = L_MTR_MIN - l_out;
+        
+    } else {
+        // Trying to drive backwards
+        L_MTR_DIR = L_MTR_REV;
+        l_out = L_MTR_MIN + l_out;
+    }
+    
+    // Guard overflow
+    if(l_out < L_MTR_MIN / MAX_SPD_DIV) {
+        l_out = L_MTR_MIN / MAX_SPD_DIV;
+    } else if(l_out > L_MTR_MIN) {
+        l_out = L_MTR_MIN;
+    }
+    L_MTR_PER = l_out;
+    
+    
+    if(r_out > 0) {
+        // Trying to drive forward
+        R_MTR_DIR = R_MTR_FWD;
+        r_out = R_MTR_MIN - r_out;
+        
+    } else {
+        // Trying to drive backwards
+        R_MTR_DIR = R_MTR_REV;
+        r_out = R_MTR_MIN + r_out;
+    }
+    
+    // Guard overflow
+    if(r_out > R_MTR_MIN) {
+        r_out = R_MTR_MIN;
+    } else if(r_out < R_MTR_MIN / MAX_SPD_DIV) {
+        r_out = R_MTR_MIN / MAX_SPD_DIV;
+    }
+    R_MTR_PER = r_out;
+}
+/**
+ * Simply does nothing after setting motor speed to MIN.
+ */
+void init_off_controller() {
+    L_MTR_PER = L_MTR_MIN;
+    R_MTR_PER = R_MTR_MIN;
+}
+void off_controller() {
+    // Does nothing.
+}
 
 
 void simple_position_tester() {

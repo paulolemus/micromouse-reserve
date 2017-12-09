@@ -16,6 +16,8 @@ extern "C" {
     void straights_stop_procedure();
     
     void straights_rotate_procedure();
+    
+    void spin_procedure();
 
 
 #ifdef	__cplusplus

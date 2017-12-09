@@ -16,6 +16,13 @@ volatile unsigned int sr_sensor;
 volatile unsigned int fl_sensor;
 volatile unsigned int fr_sensor;
 
+// Last measurements
+volatile unsigned int sl_last;
+volatile unsigned int sr_last;
+volatile unsigned int fl_last;
+volatile unsigned int fr_last;
+
+
 #define CAPTURE_SCAN(sensor_var) (sensor_var = (sensor_var + ADC1BUF0) / 2)
 
 
@@ -61,10 +68,10 @@ void enable_adc() {
     IEC1bits.T4IE = 1; // Enable Tmr4 interrupts
     
     // Set state of global variables
-    sl_sensor = SLD_CLOSE;
-    sr_sensor = SRD_CLOSE;
-    fl_sensor = FLD_CLOSE;
-    fr_sensor = FRD_CLOSE;
+    sl_sensor = 0;
+    sr_sensor = 0;
+    fl_sensor = 0;
+    fr_sensor = 0;
     tmr_4_ticks = 0;
     adc_rotation = 0;
     
@@ -108,10 +115,17 @@ void __attribute__((__interrupt__, __shadow__, no_auto_psv)) _T4Interrupt(void) 
 
     tmr_4_ticks++;
     
-    if(tmr_4_ticks == 1) {
+    if(tmr_4_ticks == ADC_DT) {
+        tmr_4_ticks = 0;
+
+        // Save last values
+        sl_last = sl_sensor;
+        sr_last = sr_sensor;
+        fl_last = fl_sensor;
+        fr_last = fr_sensor;
+        
         // Convert here
         AD1CON1bits.SAMP = 1;
-        tmr_4_ticks = 0;
     }
 }
 
@@ -143,21 +157,21 @@ void __attribute__((__interrupt__, __shadow__, no_auto_psv)) _ADC1Interrupt(void
     
     // Check if sl is working
     if(sl_sensor > SLD_CLOSE) {
-        LED_ON(LED_R);
+        //LED_ON(LED_R);
     }
     else {
-        LED_OFF(LED_R);
+        //LED_OFF(LED_R);
     }
     // Check if sr is working - GOOD
     if(sr_sensor > SRD_CLOSE) {
-        LED_ON(LED_G);
+        //LED_ON(LED_G);
     } else {
-        LED_OFF(LED_G);
+        //LED_OFF(LED_G);
     }
     // Check if fr is working - GOOD
     if(fr_sensor > FRD_CLOSE) {
-        LED_ON(LED_B);
+        //LED_ON(LED_B);
     } else {
-        LED_OFF(LED_B);
+        //LED_OFF(LED_B);
     }
 }

@@ -51,16 +51,35 @@ extern "C" {
      */
     void set_motor_control_function(void (*motor_control_ptr)(void));
     
+    void brake();
+    void unbrake();
+    
     // Motor control functions
+    
+    // Drive straight with no correction.
     void init_straight_controller();
     void straight_controller();
     
+    // Track against a left or right wall.
+    void init_track_controller();
+    void track_controller();
+    
+    // Control to the current position
     void init_position_controller();
     void position_controller();
     
+    void init_left_controller();
     void turn_left_controller();
+    
+    void init_right_controller();
     void turn_right_controller();
+    
+    void init_around_controller();
     void turn_around_controller();
+    
+    // The do nothing controller
+    void init_off_controller();
+    void off_controller();
 
     // Testing functions for the motors
     void simple_position_tester();
