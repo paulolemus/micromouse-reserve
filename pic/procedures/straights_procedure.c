@@ -4,6 +4,7 @@
 
 #include "../adc.h"
 #include "../motor_control.h"
+#include "../wait.h"
 
 
 // Global variables
@@ -71,33 +72,24 @@ void straights_rotate_procedure() {
     enable_adc();
     enable_motor_control();
     
-    unsigned int curr_mode = 0; // 0 == track, 1 == position (in-place), 3 == turn
-    
     // Procedures runs indefinitely
     while(1) {
             
-        if(curr_mode == 0) {
-            // Currently driving straight
-            
+        // Check for a wall
+        if(fr_sensor > FRD_CLOSE) {
+            // Set to position control
+            init_position_controller();
+            set_motor_control_function(&position_controller);
 
-            // Check for a wall
-            if(fr_sensor > FRD_CLOSE) {
-                // Set to position control
-                curr_mode = 1;
-                init_position_controller();
-                set_motor_control_function(&position_controller);
-            }
+            wait_ms(500);
 
-        } else {
-            // Currently held in-place
+            init_around_controller();
+            set_motor_control_function(&turn_around_controller);
 
-            // Check if wall is cleared
-            if(fr_sensor < FRD_CLOSE) {
-                // Continue driving forward
-                curr_mode = 0;
-                init_track_controller();
-                set_motor_control_function(&track_controller);
-            }
+            wait_ms(1000);
+
+            init_track_controller();
+            set_motor_control_function(&track_controller);
         }
     }
 }
@@ -114,6 +106,18 @@ void spin_procedure() {
     enable_motor_control();
     
     while(1) {
+        
+        wait_ms(1000);
+        init_around_controller();
+        set_motor_control_function(&turn_around_controller);
+        
+        wait_ms(1000);
+        init_left_controller();
+        set_motor_control_function(&turn_left_controller);
+        
+        wait_ms(1000);
+        init_right_controller();
+        set_motor_control_function(&turn_right_controller);
         
     }
 }

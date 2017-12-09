@@ -69,9 +69,7 @@
 
 #include "pic/procedures/straights_procedure.h"
 #include "pic/procedures/startup_procedure.h"
-
-
-extern volatile unsigned int fr_sensor;
+#include "pic/procedures//explore_procedure.h"
 
 
 /*
@@ -102,9 +100,8 @@ int main(int argc, char** argv) {
     while(1) {
         
         startup_procedure();
+        rand_explore_procedure();
         
-        //straights_stop_procedure();
-        spin_procedure();
     }
     
     return (EXIT_SUCCESS);

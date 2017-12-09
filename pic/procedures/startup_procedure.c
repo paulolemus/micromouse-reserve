@@ -24,7 +24,7 @@ void startup_procedure() {
     LED_OFF(LED_B);
     
     // wait for sensors to get close.
-    while(fr_sensor < FRD_CLOSE && sr_sensor < SRD_CLOSE);
+    while(fr_sensor < 900 && sr_sensor < 900);
     
     // Mini lightshow
     const unsigned ms = 75;

@@ -57,17 +57,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=pic/components/oscillator.c pic/components/led.c pic/components/sensor.c pic/components/motor.c pic/components/encoder.c pic/adc.c pic/motor_control.c pic/procedures/straights_procedure.c pic_main.c pic/wait.c pic/procedures/startup_procedure.c
+SOURCEFILES_QUOTED_IF_SPACED=pic/components/oscillator.c pic/components/led.c pic/components/sensor.c pic/components/motor.c pic/components/encoder.c pic/adc.c pic/motor_control.c pic/procedures/straights_procedure.c pic/wait.c pic/procedures/startup_procedure.c pic_main.c pic/procedures/explore_procedure.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/pic/components/oscillator.o ${OBJECTDIR}/pic/components/led.o ${OBJECTDIR}/pic/components/sensor.o ${OBJECTDIR}/pic/components/motor.o ${OBJECTDIR}/pic/components/encoder.o ${OBJECTDIR}/pic/adc.o ${OBJECTDIR}/pic/motor_control.o ${OBJECTDIR}/pic/procedures/straights_procedure.o ${OBJECTDIR}/pic_main.o ${OBJECTDIR}/pic/wait.o ${OBJECTDIR}/pic/procedures/startup_procedure.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/pic/components/oscillator.o.d ${OBJECTDIR}/pic/components/led.o.d ${OBJECTDIR}/pic/components/sensor.o.d ${OBJECTDIR}/pic/components/motor.o.d ${OBJECTDIR}/pic/components/encoder.o.d ${OBJECTDIR}/pic/adc.o.d ${OBJECTDIR}/pic/motor_control.o.d ${OBJECTDIR}/pic/procedures/straights_procedure.o.d ${OBJECTDIR}/pic_main.o.d ${OBJECTDIR}/pic/wait.o.d ${OBJECTDIR}/pic/procedures/startup_procedure.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/pic/components/oscillator.o ${OBJECTDIR}/pic/components/led.o ${OBJECTDIR}/pic/components/sensor.o ${OBJECTDIR}/pic/components/motor.o ${OBJECTDIR}/pic/components/encoder.o ${OBJECTDIR}/pic/adc.o ${OBJECTDIR}/pic/motor_control.o ${OBJECTDIR}/pic/procedures/straights_procedure.o ${OBJECTDIR}/pic/wait.o ${OBJECTDIR}/pic/procedures/startup_procedure.o ${OBJECTDIR}/pic_main.o ${OBJECTDIR}/pic/procedures/explore_procedure.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/pic/components/oscillator.o.d ${OBJECTDIR}/pic/components/led.o.d ${OBJECTDIR}/pic/components/sensor.o.d ${OBJECTDIR}/pic/components/motor.o.d ${OBJECTDIR}/pic/components/encoder.o.d ${OBJECTDIR}/pic/adc.o.d ${OBJECTDIR}/pic/motor_control.o.d ${OBJECTDIR}/pic/procedures/straights_procedure.o.d ${OBJECTDIR}/pic/wait.o.d ${OBJECTDIR}/pic/procedures/startup_procedure.o.d ${OBJECTDIR}/pic_main.o.d ${OBJECTDIR}/pic/procedures/explore_procedure.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/pic/components/oscillator.o ${OBJECTDIR}/pic/components/led.o ${OBJECTDIR}/pic/components/sensor.o ${OBJECTDIR}/pic/components/motor.o ${OBJECTDIR}/pic/components/encoder.o ${OBJECTDIR}/pic/adc.o ${OBJECTDIR}/pic/motor_control.o ${OBJECTDIR}/pic/procedures/straights_procedure.o ${OBJECTDIR}/pic_main.o ${OBJECTDIR}/pic/wait.o ${OBJECTDIR}/pic/procedures/startup_procedure.o
+OBJECTFILES=${OBJECTDIR}/pic/components/oscillator.o ${OBJECTDIR}/pic/components/led.o ${OBJECTDIR}/pic/components/sensor.o ${OBJECTDIR}/pic/components/motor.o ${OBJECTDIR}/pic/components/encoder.o ${OBJECTDIR}/pic/adc.o ${OBJECTDIR}/pic/motor_control.o ${OBJECTDIR}/pic/procedures/straights_procedure.o ${OBJECTDIR}/pic/wait.o ${OBJECTDIR}/pic/procedures/startup_procedure.o ${OBJECTDIR}/pic_main.o ${OBJECTDIR}/pic/procedures/explore_procedure.o
 
 # Source Files
-SOURCEFILES=pic/components/oscillator.c pic/components/led.c pic/components/sensor.c pic/components/motor.c pic/components/encoder.c pic/adc.c pic/motor_control.c pic/procedures/straights_procedure.c pic_main.c pic/wait.c pic/procedures/startup_procedure.c
+SOURCEFILES=pic/components/oscillator.c pic/components/led.c pic/components/sensor.c pic/components/motor.c pic/components/encoder.c pic/adc.c pic/motor_control.c pic/procedures/straights_procedure.c pic/wait.c pic/procedures/startup_procedure.c pic_main.c pic/procedures/explore_procedure.c
 
 
 CFLAGS=
@@ -150,13 +150,6 @@ ${OBJECTDIR}/pic/procedures/straights_procedure.o: pic/procedures/straights_proc
 	${MP_CC} $(MP_EXTRA_CC_PRE)  pic/procedures/straights_procedure.c  -o ${OBJECTDIR}/pic/procedures/straights_procedure.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/pic/procedures/straights_procedure.o.d"      -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1    -omf=elf -DXPRJ_default=$(CND_CONF)  -legacy-libc  $(COMPARISON_BUILD)  -O0 -msmart-io=1 -Wall -msfr-warn=off  
 	@${FIXDEPS} "${OBJECTDIR}/pic/procedures/straights_procedure.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
 	
-${OBJECTDIR}/pic_main.o: pic_main.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/pic_main.o.d 
-	@${RM} ${OBJECTDIR}/pic_main.o 
-	${MP_CC} $(MP_EXTRA_CC_PRE)  pic_main.c  -o ${OBJECTDIR}/pic_main.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/pic_main.o.d"      -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1    -omf=elf -DXPRJ_default=$(CND_CONF)  -legacy-libc  $(COMPARISON_BUILD)  -O0 -msmart-io=1 -Wall -msfr-warn=off  
-	@${FIXDEPS} "${OBJECTDIR}/pic_main.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
-	
 ${OBJECTDIR}/pic/wait.o: pic/wait.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}/pic" 
 	@${RM} ${OBJECTDIR}/pic/wait.o.d 
@@ -170,6 +163,20 @@ ${OBJECTDIR}/pic/procedures/startup_procedure.o: pic/procedures/startup_procedur
 	@${RM} ${OBJECTDIR}/pic/procedures/startup_procedure.o 
 	${MP_CC} $(MP_EXTRA_CC_PRE)  pic/procedures/startup_procedure.c  -o ${OBJECTDIR}/pic/procedures/startup_procedure.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/pic/procedures/startup_procedure.o.d"      -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1    -omf=elf -DXPRJ_default=$(CND_CONF)  -legacy-libc  $(COMPARISON_BUILD)  -O0 -msmart-io=1 -Wall -msfr-warn=off  
 	@${FIXDEPS} "${OBJECTDIR}/pic/procedures/startup_procedure.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/pic_main.o: pic_main.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/pic_main.o.d 
+	@${RM} ${OBJECTDIR}/pic_main.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE)  pic_main.c  -o ${OBJECTDIR}/pic_main.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/pic_main.o.d"      -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1    -omf=elf -DXPRJ_default=$(CND_CONF)  -legacy-libc  $(COMPARISON_BUILD)  -O0 -msmart-io=1 -Wall -msfr-warn=off  
+	@${FIXDEPS} "${OBJECTDIR}/pic_main.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/pic/procedures/explore_procedure.o: pic/procedures/explore_procedure.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}/pic/procedures" 
+	@${RM} ${OBJECTDIR}/pic/procedures/explore_procedure.o.d 
+	@${RM} ${OBJECTDIR}/pic/procedures/explore_procedure.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE)  pic/procedures/explore_procedure.c  -o ${OBJECTDIR}/pic/procedures/explore_procedure.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/pic/procedures/explore_procedure.o.d"      -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1    -omf=elf -DXPRJ_default=$(CND_CONF)  -legacy-libc  $(COMPARISON_BUILD)  -O0 -msmart-io=1 -Wall -msfr-warn=off  
+	@${FIXDEPS} "${OBJECTDIR}/pic/procedures/explore_procedure.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
 	
 else
 ${OBJECTDIR}/pic/components/oscillator.o: pic/components/oscillator.c  nbproject/Makefile-${CND_CONF}.mk
@@ -228,13 +235,6 @@ ${OBJECTDIR}/pic/procedures/straights_procedure.o: pic/procedures/straights_proc
 	${MP_CC} $(MP_EXTRA_CC_PRE)  pic/procedures/straights_procedure.c  -o ${OBJECTDIR}/pic/procedures/straights_procedure.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/pic/procedures/straights_procedure.o.d"        -g -omf=elf -DXPRJ_default=$(CND_CONF)  -legacy-libc  $(COMPARISON_BUILD)  -O0 -msmart-io=1 -Wall -msfr-warn=off  
 	@${FIXDEPS} "${OBJECTDIR}/pic/procedures/straights_procedure.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
 	
-${OBJECTDIR}/pic_main.o: pic_main.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/pic_main.o.d 
-	@${RM} ${OBJECTDIR}/pic_main.o 
-	${MP_CC} $(MP_EXTRA_CC_PRE)  pic_main.c  -o ${OBJECTDIR}/pic_main.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/pic_main.o.d"        -g -omf=elf -DXPRJ_default=$(CND_CONF)  -legacy-libc  $(COMPARISON_BUILD)  -O0 -msmart-io=1 -Wall -msfr-warn=off  
-	@${FIXDEPS} "${OBJECTDIR}/pic_main.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
-	
 ${OBJECTDIR}/pic/wait.o: pic/wait.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}/pic" 
 	@${RM} ${OBJECTDIR}/pic/wait.o.d 
@@ -248,6 +248,20 @@ ${OBJECTDIR}/pic/procedures/startup_procedure.o: pic/procedures/startup_procedur
 	@${RM} ${OBJECTDIR}/pic/procedures/startup_procedure.o 
 	${MP_CC} $(MP_EXTRA_CC_PRE)  pic/procedures/startup_procedure.c  -o ${OBJECTDIR}/pic/procedures/startup_procedure.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/pic/procedures/startup_procedure.o.d"        -g -omf=elf -DXPRJ_default=$(CND_CONF)  -legacy-libc  $(COMPARISON_BUILD)  -O0 -msmart-io=1 -Wall -msfr-warn=off  
 	@${FIXDEPS} "${OBJECTDIR}/pic/procedures/startup_procedure.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/pic_main.o: pic_main.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/pic_main.o.d 
+	@${RM} ${OBJECTDIR}/pic_main.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE)  pic_main.c  -o ${OBJECTDIR}/pic_main.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/pic_main.o.d"        -g -omf=elf -DXPRJ_default=$(CND_CONF)  -legacy-libc  $(COMPARISON_BUILD)  -O0 -msmart-io=1 -Wall -msfr-warn=off  
+	@${FIXDEPS} "${OBJECTDIR}/pic_main.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/pic/procedures/explore_procedure.o: pic/procedures/explore_procedure.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}/pic/procedures" 
+	@${RM} ${OBJECTDIR}/pic/procedures/explore_procedure.o.d 
+	@${RM} ${OBJECTDIR}/pic/procedures/explore_procedure.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE)  pic/procedures/explore_procedure.c  -o ${OBJECTDIR}/pic/procedures/explore_procedure.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/pic/procedures/explore_procedure.o.d"        -g -omf=elf -DXPRJ_default=$(CND_CONF)  -legacy-libc  $(COMPARISON_BUILD)  -O0 -msmart-io=1 -Wall -msfr-warn=off  
+	@${FIXDEPS} "${OBJECTDIR}/pic/procedures/explore_procedure.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
 	
 endif
 

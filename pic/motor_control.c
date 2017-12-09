@@ -272,8 +272,8 @@ static signed int l_sns_integral;
 static signed int r_sns_integral;
 void init_track_controller() {
     // Desired velocity is 10 ticks / ms, or 2 revolutions / sec
-    L_TRK_VEL_SP = 1300; 
-    R_TRK_VEL_SP = 1300; 
+    L_TRK_VEL_SP = 1400; 
+    R_TRK_VEL_SP = 1400; 
     
     // Desired readings for sensors
     L_TRK_SNS_SP = SLD_CLOSE - 50;
@@ -722,7 +722,7 @@ void off_controller() {
 void simple_position_tester() {
     
     const double p_term = 7; 
-    const signed int SETPOINT = 1024 * 5 / 2;
+    const signed int SETPOINT = 1024 * 5 / 2.0;
     L_MTR_PER = L_MTR_MIN;
     R_MTR_PER = R_MTR_MIN;
     
@@ -797,11 +797,11 @@ void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
         const double r_pos_del 
             = (r_qei_curr - r_qei_last) * R_QEI_ROT + r_pos_fin - r_pos;
         
-        const signed int l_vel_fin = l_pos_del * 100 / CONTROL_DT;
-        const signed int r_vel_fin = r_pos_del * 100 / CONTROL_DT;
+        const signed int l_vel_fin = l_pos_del * 100 / (double)CONTROL_DT;
+        const signed int r_vel_fin = r_pos_del * 100 / (double)CONTROL_DT;
         
-        l_acc = (l_vel_fin - l_vel) / CONTROL_DT;
-        r_acc = (r_vel_fin - r_vel) / CONTROL_DT;
+        l_acc = (l_vel_fin - l_vel) / (double)CONTROL_DT;
+        r_acc = (r_vel_fin - r_vel) / (double)CONTROL_DT;
         
         l_vel = l_vel_fin;
         r_vel = r_vel_fin;
@@ -824,7 +824,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
 void __attribute__((__interrupt__, no_auto_psv)) _QEI1Interrupt(void) {
     IFS3bits.QEI1IF = 0; // Clear flag
     
-    if(R_QEI_CNT > R_QEI_ROT / 2) {
+    if(R_QEI_CNT > R_QEI_ROT / 2.0) {
         // If CNT is now max, it underflowed - moving backwards
         r_qei_curr--;
         
@@ -850,7 +850,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _QEI1Interrupt(void) {
 void __attribute__((__interrupt__, no_auto_psv)) _QEI2Interrupt(void) {
     IFS4bits.QEI2IF = 0; // Clear flag
     
-    if(L_QEI_CNT > L_QEI_ROT / 2) {
+    if(L_QEI_CNT > L_QEI_ROT / 2.0) {
         // If CNT is now max, it underflowed - moving backwards
         l_qei_curr--;
         
