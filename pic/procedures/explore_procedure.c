@@ -46,8 +46,8 @@ void rand_explore_procedure() {
             left_open = 0;
             right_open = 0;
             
-            if(sl_sensor < SLD_CLOSE - 200) left_open = 1;
-            if(sr_sensor < SRD_CLOSE - 200) right_open = 1;
+            if(sl_sensor < SLD_FAR) left_open = 1;
+            if(sr_sensor < SRD_FAR) right_open = 1;
             
             // Stop
             init_position_controller();

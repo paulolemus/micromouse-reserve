@@ -72,6 +72,8 @@
 #include "pic/procedures//explore_procedure.h"
 
 
+extern unsigned int mode_selected;
+
 /*
  * MIPS = million instructions per second
  * MAX = 40 MIPS = 40 Million instructions per second
@@ -93,15 +95,38 @@ int main(int argc, char** argv) {
     init_adc();
     init_motor_control();
     
+    /*
+     * Mode to run the mouse in.
+     * Pression the button will toggle the mode.
+     * 0 == random search
+     * 1 == map
+     * 2 == self defined 
+     */
     
     // Run primary procedures in this while loop.
     // The procedures are long lived programs that complete a specific task,
     // such as mapping a maze, speedrunning, or waiting for commands.
     while(1) {
         
-        startup_procedure();
-        rand_explore_procedure();
         
+        startup_procedure();
+        
+        // RED MODE
+        if(mode_selected == 0) {
+            
+            rand_explore_procedure();
+            
+            // GREEN MODE
+        } else if(mode_selected == 1) {
+            
+            
+            
+            // BLUE MODE
+        } else if(mode_selected == 2) {
+            
+            
+            
+        }
     }
     
     return (EXIT_SUCCESS);

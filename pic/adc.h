@@ -26,6 +26,11 @@ extern "C" {
 #define SRD_CLOSE 550 // GOOD
 #define SLD_CLOSE 720 // GOOD
     
+#define FRD_FAR 500 // GOOD
+#define FLD_FAR 100 // kinda messed up
+#define SRD_FAR 350 // GOOD
+#define SLD_FAR 450 // GOOD
+    
 #define ADC_DT 1 // 1 ms
     
 #define SELECT_DETECTOR(detector_id) (AD1CHS0bits.CH0SA = detector_id)

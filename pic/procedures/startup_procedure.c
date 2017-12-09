@@ -12,19 +12,41 @@
  */
 extern volatile unsigned int fr_sensor;
 extern volatile unsigned int sr_sensor;
+extern volatile unsigned int sl_sensor;
+
+// Mode to run sensor in
+unsigned int mode_selected;
+
+/**
+ * Wait for the user to flash hand before operating.
+ * It also keeps track of what mode you want to use by toggling the button.
+ */
 void startup_procedure() {
     
     // Initial config
+    mode_selected = 0;
     brake();
     enable_adc();
     
-    // Turn off lights.
-    LED_OFF(LED_R);
-    LED_OFF(LED_G);
-    LED_OFF(LED_B);
-    
     // wait for sensors to get close.
-    while(fr_sensor < 900 && sr_sensor < 900);
+    while(fr_sensor < 900 && sr_sensor < 900) {
+        
+        LED_OFF(LED_R);
+        LED_OFF(LED_G);
+        LED_OFF(LED_B);
+        
+        // Poll the QEI readings to select mode.
+        if(L_QEI_CNT < L_QEI_MAX * 0.33) {
+            mode_selected = 0;
+            LED_ON(LED_R);
+        } else if(L_QEI_CNT > L_QEI_MAX * 0.66) {
+            mode_selected = 1;
+            LED_ON(LED_G);
+        } else {
+            mode_selected = 2;
+            LED_ON(LED_B);
+        }
+    }
     
     // Mini lightshow
     const unsigned ms = 75;
